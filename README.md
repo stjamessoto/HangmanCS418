@@ -17,12 +17,14 @@ Open your terminal or command prompt and run:
 Bash
 git clone https://github.com/your-username/hangman-game.git
 cd hangman-game
+
 3. Launch the App with Docker
 You do not need to run npm install on your host machine. Docker will handle all dependencies inside the container.
 
 Run the following command:
 Bash
 docker-compose up --build
+
 4. Access the Game
 Once the container is running and the terminal displays the Vite dev server confirmation, open your browser to:
 👉 http://localhost:5173
