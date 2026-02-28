@@ -13,6 +13,8 @@ function App() {
   const [guessedLetters, setGuessedLetters] = useState([]);
   const [score, setScore] = useState({ wins: 0, losses: 0 });
   const [showModal, setShowModal] = useState(false);
+  // NEW: This prevents the score from updating multiple times per round
+  const [scoreTracked, setScoreTracked] = useState(false);
 
   const activeLetters = guessedLetters.filter(l => wordToGuess.includes(l));
   const inactiveLetters = guessedLetters.filter(l => !wordToGuess.includes(l));
@@ -28,6 +30,7 @@ function App() {
     setCategory(randomEntry.category);
     setGuessedLetters([]);
     setShowModal(false);
+    setScoreTracked(false); // Reset the score lock for the new round
     setGameStarted(true);
   }, [difficulty]);
 
@@ -37,6 +40,7 @@ function App() {
     setGuessedLetters(curr => [...curr, upper]);
   }, [guessedLetters, isWinner, isLoser, gameStarted]);
 
+  // Handle Keyboard events
   useEffect(() => {
     const handler = (e) => {
       if (!e.key.match(/^[a-z]$/i)) return;
@@ -47,9 +51,20 @@ function App() {
     return () => window.removeEventListener("keydown", handler);
   }, [addGuessedLetter]);
 
+  // Handle Win/Loss Logic and Scoring
   useEffect(() => {
-    if (isWinner || isLoser) setShowModal(true);
-  }, [isWinner, isLoser]);
+    if ((isWinner || isLoser) && !scoreTracked) {
+      setShowModal(true);
+      
+      // Update the score using a functional update to ensure accuracy
+      setScore(prev => ({
+        wins: isWinner ? prev.wins + 1 : prev.wins,
+        losses: isLoser ? prev.losses + 1 : prev.losses
+      }));
+
+      setScoreTracked(true); // Lock the score for this round
+    }
+  }, [isWinner, isLoser, scoreTracked]);
 
   if (!gameStarted) {
     return (
