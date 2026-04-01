@@ -1,8 +1,46 @@
 services:
+  # 1. React Frontend (Vite)
   hangman-game:          
     build: .             
     ports:
       - "5173:5173"      
     volumes:
       - .:/app          
-      - /app/node_modules 
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:3000  
+    depends_on:
+      - hangman-api
+    networks:
+      - hangman-network
+
+  # 2. The API (Node.js/Express)
+  hangman-api:
+    build: ./backend     
+    ports:
+      - "3000:3000"
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - PORT=3000
+    depends_on:
+      - dynamodb-local
+    networks:
+      - hangman-network
+
+  # 3. The Database (DynamoDB Local)
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: hangman-db
+    working_dir: /home/dynamodblocal
+    ports:
+      - "8000:8000"
+    # -dbPath ensures data is written to the volume instead of just memory
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    volumes:
+      - ./docker/dynamodb:/home/dynamodblocal/data
+    networks:
+      - hangman-network
+
+networks:
+  hangman-network:
+    driver: bridge
