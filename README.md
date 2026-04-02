@@ -1,30 +1,78 @@
-# HangmanCS418
-🪓 Hangman: Vite + Docker Edition
-A modern, containerized Hangman game built with React, Vite, and Docker. This setup ensures a consistent development environment across any machine without needing to install Node.js locally.
+# 🪓 Hangman: Full-Stack Docker Edition
+**CS 418 Group Project**
 
-🚀 Getting Started
-Follow these instructions to get a copy of the project up and running on your local machine using Docker.
+A modern, containerized Hangman game featuring a **React (Vite)** frontend, a **Node.js (Express)** API, and a **DynamoDB Local** database. This setup ensures a consistent development environment across any machine.
 
-1. Prerequisites
-Ensure you have the following installed:
+---
 
-Git: Download Git
+## 🏗️ Architecture & Stack
+The project utilizes a microservices architecture managed by Docker Compose:
 
-Docker Desktop: Download Docker
+* **Frontend (React/Vite)**: Handles the game UI, keyboard event listeners, and local state management.
+* **Backend (Node.js/Express)**: A Restful API that manages player authentication and score persistence.
+* **Database (DynamoDB Local)**: A containerized NoSQL database that stores player records.
 
-2. Clone the Repository
-Open your terminal or command prompt and run:
-Bash
-git clone https://github.com/your-username/hangman-game.git
-cd hangman-game
 
-3. Launch the App with Docker
-You do not need to run npm install on your host machine. Docker will handle all dependencies inside the container.
 
-Run the following command:
-Bash
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+Ensure you have **Docker Desktop** installed and running. No local installation of Node.js or Java is required.
+
+### 2. Launch the Application
+Run the following command in the root directory to build and start all services:
+```bash
 docker-compose up --build
 
-4. Access the Game
-Once the container is running and the terminal displays the Vite dev server confirmation, open your browser to:
-👉 http://localhost:5173
+### 3. Access the Game
+Game UI: http://localhost:5173
+
+API Health Check: http://localhost:3000
+
+🔍 How to Verify the Database
+Since DynamoDB Local is "headless," you can use these two primary methods to check the contents of the HangmanPlayers table.
+
+1. The API "Quick View" 
+The backend acts as a window into the database. You can see the raw JSON data for all players by visiting the following URL directly in your web browser:
+
+👉 http://localhost:3000/players
+
+When to use: Quick checks to see if a new user was created or if a win was recorded.
+
+What it shows: A JSON object containing the total player count and an array of all players.
+
+2. Postman 
+For a more structured view and to test specific player updates, use Postman.
+
+A. View All Players
+Open Postman and create a new tab.
+
+Set the method to GET.
+
+Enter the URL: http://localhost:3000/players
+
+Click Send.
+
+B. Check a Specific Player
+Set the method to GET.
+
+Enter the URL: http://localhost:3000/player/Santiago (replace "Santiago" with any username).
+
+Click Send.
+
+C. Manually Update a Score
+Set the method to PUT.
+
+Enter the URL: http://localhost:3000/player/Santiago
+
+Click the Body tab, select raw, and set the type to JSON.
+
+Paste the following JSON:
+
+JSON
+{
+  "result": "win"
+}
+Click Send. You should see the wins count increment in the response.
