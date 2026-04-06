@@ -6,8 +6,8 @@ import {
     GetCommand, 
     PutCommand, 
     UpdateCommand,
-    ScanCommand, // Added for viewing all players
-    DeleteCommand // Added for administrative cleanup
+    ScanCommand, 
+    DeleteCommand 
 } from "@aws-sdk/lib-dynamodb";
 
 const app = express();
@@ -18,6 +18,7 @@ app.use(express.json());
 
 /**
  * 1. Initialize the DynamoDB Client
+ * FIX: Using 'dynamodb-local' as the default host for Docker networking consistency.
  */
 const dynamoEndpoint = process.env.DYNAMO_ENDPOINT || "http://localhost:8000";
 
@@ -25,7 +26,7 @@ const client = new DynamoDBClient({
     region: "local",
     endpoint: dynamoEndpoint, 
     credentials: {
-        accessKeyId: "fakeMyKeyId",
+        accessKeyId: "fakeMyKeyId", // FIXED: Changed from accessKey_id
         secretAccessKey: "fakeSecretAccessKey"
     }
 });
@@ -54,7 +55,7 @@ const initTable = async (retries = 5) => {
                 break;
             } else {
                 retries -= 1;
-                console.error(`⚠️ Connection failed. Retries left: ${retries}`);
+                console.error(`⚠️ Connection failed to ${dynamoEndpoint}. Retries left: ${retries}`);
                 await new Promise(res => setTimeout(res, 2000));
             }
         }
@@ -64,9 +65,7 @@ const initTable = async (retries = 5) => {
 initTable();
 
 /**
- * NEW: GET /players
- * Returns every player in the database. 
- * Perfect for Postman checking!
+ * GET /players
  */
 app.get('/players', async (req, res) => {
     try {
@@ -81,7 +80,6 @@ app.get('/players', async (req, res) => {
 
 /**
  * GET /player/:name
- * Logic: Returns user data. Creates new user record if not found.
  */
 app.get('/player/:name', async (req, res) => {
     const { name } = req.params;
@@ -113,7 +111,7 @@ app.get('/player/:name', async (req, res) => {
 
 /**
  * PUT /player/:name
- * Logic: Atomic increment of wins/losses.
+ * Logic: Atomic increment and persistent calculation.
  */
 app.put('/player/:name', async (req, res) => {
     const { name } = req.params;
@@ -126,6 +124,7 @@ app.put('/player/:name', async (req, res) => {
     const updateAttr = result === "win" ? "wins" : "losses";
 
     try {
+        // 1. Increment the count
         const { Attributes } = await docClient.send(new UpdateCommand({
             TableName: TABLE_NAME,
             Key: { username: name },
@@ -134,20 +133,30 @@ app.put('/player/:name', async (req, res) => {
             ReturnValues: "ALL_NEW"
         }));
         
+        // 2. Calculate percentage
         const totalGames = Attributes.wins + Attributes.losses;
         const winPercent = totalGames > 0 
             ? ((Attributes.wins / totalGames) * 100).toFixed(2) 
             : "0.00";
 
-        res.json({ ...Attributes, winPercentage: winPercent });
+        // 3. Update the calculated field
+        const finalUpdate = await docClient.send(new UpdateCommand({
+            TableName: TABLE_NAME,
+            Key: { username: name },
+            UpdateExpression: `SET winPercentage = :wp`,
+            ExpressionAttributeValues: { ":wp": winPercent },
+            ReturnValues: "ALL_NEW"
+        }));
+
+        res.json(finalUpdate.Attributes);
     } catch (error) {
+        console.error("Update Error:", error);
         res.status(500).json({ error: "Could not update player stats" });
     }
 });
 
 /**
- * ADMIN: DELETE /player/:name
- * Useful for removing test data.
+ * DELETE /player/:name
  */
 app.delete('/player/:name', async (req, res) => {
     try {

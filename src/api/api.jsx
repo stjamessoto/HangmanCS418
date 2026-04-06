@@ -1,10 +1,8 @@
-// The URL of your Node.js API (running on port 3000 in Docker)
 const BASE_URL = "http://localhost:3000";
 
 /**
- * Requirement: Login / Add New Player
- * When the player enters their name, check if they're in DB with a GET request.
- * If he's new, the backend adds him; if found, it logs him in.
+ * GET /player/:name
+ * Logic: Returns { player: { username, wins, losses, winPercentage }, isNew: boolean }
  */
 export const fetchPlayer = async (playerName) => {
     try {
@@ -15,7 +13,6 @@ export const fetchPlayer = async (playerName) => {
         }
 
         const data = await response.json();
-        // Returns { player: { username, wins, losses }, isNew: boolean }
         return data; 
     } catch (error) {
         console.error("Failed to fetch player:", error);
@@ -24,8 +21,8 @@ export const fetchPlayer = async (playerName) => {
 };
 
 /**
- * Requirement: Update Record (Win or Loss)
- * When game is over, update the player stats with a PUT request.
+ * PUT /player/:name
+ * Logic: Updates stats and returns the FULL updated player object.
  */
 export const updatePlayerRecord = async (playerName, gameResult) => {
     try {
@@ -34,7 +31,6 @@ export const updatePlayerRecord = async (playerName, gameResult) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            // Logic: Send "win" or "loss" to the API
             body: JSON.stringify({ result: gameResult }), 
         });
 
@@ -42,9 +38,14 @@ export const updatePlayerRecord = async (playerName, gameResult) => {
             throw new Error("Failed to update record on server");
         }
 
-        const updatedData = await response.json();
-        // Returns the updated player object from DynamoDB
-        return updatedData; 
+        const updatedPlayer = await response.json();
+        
+        /**
+         * CRITICAL FIX: 
+         * We wrap the response in a 'player' key so it matches the 
+         * structure your App.jsx expects in setPlayerData().
+         */
+        return { player: updatedPlayer }; 
     } catch (error) {
         console.error("Update error:", error);
         return null;
